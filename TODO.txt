@@ -1,0 +1,6 @@
+- Download feature. NOTE: Talk to Stefan about specifics
+- Deployment; Figure out AWS , talk to Thomas 
+- Add more filters and fix any current ones
+- Change favicon and title
+- Transition from hardcoded metadata i.e. countries, infection types, susceptibility ratings etc. Primarily within the query builder
+- Acceptance testing
