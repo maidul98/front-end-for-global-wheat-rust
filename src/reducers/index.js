@@ -65,6 +65,12 @@ const data = (state=init, action) => {
             nextState.query.search[action.payload]=action.payload;
             break;
 
+        case actionTypes.UPDATE_SEARCH_COLUMN:
+
+            // we need to keep track of which filter opions are being updated.
+            nextState.query.search_column[action.filter_index] = action.column_name;
+            nextState.query.search_specificity[action.filter_index] = action.search_specificity;
+            break;
         case actionTypes.REMOVE_FROM_SEARCH:
             // remove term from search object within query object
             delete nextState.query.search[action.payload];
@@ -78,7 +84,6 @@ const data = (state=init, action) => {
             nextState.working = false;
             nextState.data = action.payload.data.response;
             nextState.total = action.payload.data.total[0]["COUNT(*)"];
-            // nextState.download_link = action.downloadUrl;
             break;
 
         case actionTypes.DOWNLOAD_RESULT:

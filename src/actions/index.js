@@ -2,8 +2,8 @@ import axios from 'axios';
 
 import actionTypes from './actionTypes';
 
-var urlPrefix = "http://localhost:3001/";
-// var urlPrefix = "http://ec2-54-175-100-18.compute-1.amazonaws.com:3001/";
+// var urlPrefix = "http://localhost:3001/";
+var urlPrefix = "http://ec2-54-175-100-18.compute-1.amazonaws.com:3001/";
 // console.log("me:", urlPrefix);
 
 const getData = (start, count) => {
@@ -83,11 +83,13 @@ const setOrder = (id) => {
     }
 }
 
-const search = (name) => {
+const search = (name, col_name="search_name") => {
     return {
         type: actionTypes.SEARCH,
+        column_name: col_name,
         payload: name
     };
+    
 }
 
 const removeFromSearch = (name) => {
@@ -109,22 +111,59 @@ const update = (start, count, queryObject, orderObj) => {
 
 // HELPER METHODS
 const _buildQueryString = (queryObject) => {
+    let filters_query = [];
+
+    var filters = Object.keys(queryObject).filter((x) => {
+        if(x != "search" && queryObject[x] !=null){
+            return x
+        }
+    });
+
+    if(filters.length != 0){
+        filters.map((item, index)=>{
+            filters_query.push(item+"="+queryObject[item]) 
+
+        });
+    }
+
+     if("search" in queryObject && Object.keys(queryObject['search']).length > 0){
+        queryObject['search'].map((item, index)=>{
+            filters_query.push("searchFilters[filter_"+index+"][]="+item['column']+"&searchFilters[filter_"+index+"][]="+item['specificity']+"&searchFilters[filter_"+index+"][]="+item['search'])
+        });
+     }
+    
+
+     if (filters_query.length == 0){
+         return ""
+     }else{
+         console.log("&"+filters_query.join("&"))
+         return "&"+filters_query.join("&")
+     }
+
+
     var filters = Object.keys(queryObject).filter((x) => {
         if(x === 'search') {
             // search maps to an object. If object has no keys, no search terms were entered by the user
             return Object.keys(queryObject[x]).length !== 0;
         }
-        return queryObject[x]}
-    );
+        return queryObject[x]
+    });
+
+    console.log(filters)
+
     if(filters.length === 0) return ""; //i.e. applied no filters
     filters = filters.map((x) => {
         if(x === 'search') {
             // speacial functionallity for search since, value of "search" key is an object unlike other keys of query object
             const searchParams = Object.keys(queryObject[x]).map(searchTerm => `search[]=${searchTerm}`);
+            console.log(searchParams)
             return searchParams.join('&');
         }
+        console.log(`${x}=${queryObject[x]}`)
         return `${x}=${queryObject[x]}`;
     });
+
+    console.log("&"+filters.join('&'))
     return "&"+filters.join('&');
 } 
 
@@ -147,8 +186,18 @@ const _buildOrderString = (orderObj) => {
     return ordering;
 }
 
+const updateSearchFilter = (filter_obj) => {
+    return {
+        type: actionTypes.UPDATE_SEARCH_COLUMN,
+        column_name: filter_obj['column_name'],
+        search_specificity: filter_obj['specificity'],
+        filter_index: 0
+    }
+}
+
 // MAKE SURE TO EXPORT YOUR ACTIONS
 export default  {
+    updateSearchFilter,
     getData,
     getYears,
     setCount,

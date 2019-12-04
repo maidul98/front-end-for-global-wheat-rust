@@ -1,17 +1,22 @@
 import React from 'react';
-import { Form, Button, Popup } from 'semantic-ui-react';
+import { Form, Button } from 'semantic-ui-react';
 import { connect } from 'react-redux';
 import { bindActionCreators }  from 'redux';
 
-import Search from './Search';
 import actions from '../actions';
+import SearchFilters from './SearchFilters';
 
 
 
 class Controls extends React.Component {
     constructor(props){
         super(props);
-        this.state ={'yearsOptions':[]}
+        this.state ={
+            'yearsOptions':[],
+            "filters": [{"specificity":'contains', "column":"Variety", "search": ""}]
+            
+        }
+
     }
 
     componentWillMount = () =>  {
@@ -22,7 +27,6 @@ class Controls extends React.Component {
             years.forEach((element) => {
                 yearsObject.push({ key: String(element['year']), text: String(element['year']), value: Number(element['year']) })
             });
-            // this.fukinVar = yearsObject
             this.setState({'yearsOptions': yearsObject})
         }).catch(function(e){
             console.log(e)
@@ -30,7 +34,6 @@ class Controls extends React.Component {
     }
 
     handleQueryDropdown = (e, { value }) => {
-        // console.log(e.currentTarget.parentNode.parentNode);
         this.props.buildQuery(e.currentTarget.parentNode.parentNode.id, value)
     }
 
@@ -64,9 +67,66 @@ class Controls extends React.Component {
         this.props.downloadExcel(0, this.props.data.total, this.props.data.query, this.props.data.order)
     }
 
+    updateColumn = (index, blank, event) => {
+        let copyState = [...this.state['filters']]
+        copyState[index]['column'] = event.target.value
+        this.setState({'filters': copyState})
+    }
+
+    updateSpecificity = (index, blank, event) => {
+        let copyState = [...this.state['filters']]
+        copyState[index]['specificity'] = event.target.value
+        this.setState({'filters': copyState})
+    }
+
+    updateSearchTerm = (index, blank, event) => {
+        let copyState = [...this.state['filters']]
+        copyState[index]['search'] = event.target.value
+        this.setState({'filters': copyState})
+    }
+
+    addFilter = (index)=>{
+        let copyFilters = [...this.state['filters']];
+        if(index== null){
+            copyFilters.push({"specificity":'contains', "column":"Variety", "search": ""})
+            this.setState({'filters': copyFilters})
+        }else{
+            index = index+1 // append in front of current index
+            let left = copyFilters.slice(0, index)
+            let right = copyFilters.slice(index)
+            let newFilterArray = left.concat({"specificity":'contains', "column":"Variety", "search": ""}, right )
+            this.setState({'filters': newFilterArray})
+        }
+
+    }
+
+    deleteFilter = (index)=>{
+        let copyFilters = this.state['filters']
+        copyFilters.splice(index, 1)
+        this.setState({"filters": copyFilters})
+    }
+
+    searchSubmitHandle = () => {
+        this.props.data.query.search = this.state.filters
+        this.props.update(this.props.data.start, this.props.data.count, this.props.data.query, this.props.data.order);
+    }
+
+    clearFiltersHandle = () => {
+        this.props.data.query.search = {}
+        this.state.filters = [{"specificity":'contains', "column":"Variety", "search": ""}]
+    
+        let copyFilters = this.state['filters']
+        this.setState({"filters": copyFilters})
+
+        this.props.update(this.props.data.start, this.props.data.count, this.props.data.query, this.props.data.order);
+    }
+
+
+
+
     render() {
         const dataReducer = this.props.data;
-        const nullOpt = { key: null, text: "---", value: null };
+        const nullOpt = { key: null, text: "all", value: null };
         
         const countryOptions = [
             nullOpt,
@@ -84,17 +144,8 @@ class Controls extends React.Component {
 
         const susceptibilityOptions = [
             nullOpt,
-            { key: 'R', text: 'R', value: 'R' },
-            { key: 'TR', text: 'TR', value: 'TR' },
-            { key: 'MR', text: 'MR', value: 'MR' },
-            { key: 'MS', text: 'MS', value: 'MS' },
-            { key: 'M', text: 'M', value: 'M' },
-            { key: 'MSS', text: 'MSS', value: 'MSS' },
-            { key: 'TS', text: 'TS', value: 'TS' },
-            { key: 'S', text: 'S', value: 'S' },
-            { key: 'TMS', text: 'TMS', value: 'TMS' },
-            { key: 'TMR', text: 'TMR', value: 'TMR' },
-            { key: 'RMR', text: 'RMR', value: 'RMR' },
+            { key: 'susceptible', text: 'Susceptible', value: 'susceptible' },
+            { key: 'resistant', text: 'Resistant', value: 'resistant' }
         ]
 
         return (
@@ -109,18 +160,12 @@ class Controls extends React.Component {
                             onChange={this.handleQueryDropdown}
                             value={dataReducer.query.country}
                         />
-                        {/* <Form.Dropdown id= "crop"
-                            placeholder="Select Crop Type" 
-                            options={countryOptions}
-                            onChange={this.handleQueryDropdown}
-                            value={dataReducer.query.crop}
-                        /> */}
-                        <Form.Dropdown id="susceptibility" 
+                        {/* <Form.Dropdown id="susceptibility" 
                             placeholder="Select Susceptibility Rating" 
                             options={susceptibilityOptions}
                             onChange={this.handleQueryDropdown}
                             value={dataReducer.query.susceptibility}
-                        />
+                        /> */}
                         <Form.Dropdown id="year" 
                             placeholder="Select Year" 
                             options={yearOptions}
@@ -145,6 +190,7 @@ class Controls extends React.Component {
 
                     <Button fluid target="_blank" href={this.props.data.download_link} onMouseEnter={this.downloadExcel} >Download this search</Button>
                 </div>
+
                 <div id="legend" className="group">
                     <h4 className="heading">Legend</h4>
                     <ul>   
@@ -158,12 +204,29 @@ class Controls extends React.Component {
                         <li>S = Susceptible</li>
                     </ul>
                 </div>
-                <Search 
-                    storeData={this.props.data}
-                    searchAction={this.props.search}
-                    removeFromSearchAction={this.props.removeFromSearch}
-                    updateAction={this.props.update}
-                />
+
+                {this.state['filters'].map((item, index)=> 
+                    <SearchFilters 
+                        key={index}
+                        storeData={this.props.data} 
+                        searchAction={this.props.search} 
+                        removeFromSearchAction={this.props.removeFromSearch} 
+                        updateAction={this.props.update} 
+                        columnToSearch = {this.state.column_name }
+                        updateSearchFilter = {this.props.updateSearchFilter}
+                        deleteFilter = {this.deleteFilter.bind(this, index)}
+                        addFilter = {this.addFilter.bind(this, index)}
+                        index = {index}
+                        selected_fields = {item}
+                        updateSpecificity = {this.updateSpecificity.bind(this, index, null)}
+                        updateColumn = {this.updateColumn.bind(this, index, null)}
+                        updateSearchTerm = {this.updateSearchTerm.bind(this, index, null)}
+                    />
+                )}
+
+                <button onClick={this.searchSubmitHandle} className="search_submit_btn">Search</button>
+                <button onClick={this.clearFiltersHandle} className="clear_filters">Clear filters</button>
+              
             </div>
         )
     }
@@ -185,7 +248,8 @@ function matchDispatchToProps(dispatch) {
       removeFromSearch: actions.removeFromSearch,
       update: actions.update,
       getYears: actions.getYears,
-      downloadExcel: actions.downloadExcel
+      downloadExcel: actions.downloadExcel,
+      updateSearchFilter: actions.updateSearchFilter
     }, dispatch);
 }
   
